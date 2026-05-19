@@ -80,7 +80,7 @@ We may update these terms. Continued use of the site after changes constitutes a
 };
 
 // ─── AFFILIATE TAG (replace with your real Amazon Associates tag) ─────────────
-const AMAZON_TAG = "goodiebag01-20";
+const AMAZON_TAG = "smawormom06-20";
 const amazonLink = (q) =>
   `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=${AMAZON_TAG}`;
 
