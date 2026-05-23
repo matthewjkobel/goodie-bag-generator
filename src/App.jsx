@@ -4,9 +4,7 @@ import { useState, useEffect, useRef } from "react";
 const LEGAL_CONTENT = {
   disclosure: {
     title: "Affiliate Disclosure",
-    body: `As an Amazon Associate this site earns from qualifying purchases.
-
-Goodie Bag Generator is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com.
+    body: `Goodie Bag Generator is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com.
 
 When you click on a product link on this site and make a purchase, we may earn a small commission at no additional cost to you. This helps support our work and keeps the tool free to use.
 
@@ -501,6 +499,21 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
     return JSON.parse(match ? match[0] : text);
   };
 
+  // Progressive enhancement: after a bag renders with search links, swap in real
+  // ASINs/images/prices from the Creators API. Silent on failure — search links remain.
+  const enrichBag = async (bag) => {
+    try {
+      const r = await fetch("/api/enrich", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: bag.items }),
+      });
+      if (!r.ok) return;
+      const { items } = await r.json();
+      setResult(prev => prev ? { ...prev, items } : prev);
+    } catch { /* keep search links */ }
+  };
+
   const generate = async (bypassCache = false) => {
     setLoading(true); setError(null); setResult(null); setDebugInfo(null);
     try {
@@ -509,6 +522,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
         const cached = cacheGet(form);
         if (cached) {
           setResult(cached);
+          enrichBag(cached);
           setDebugInfo({ attempts: 0, cached: true });
           setConfetti(c => c + 1);
           setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
@@ -526,6 +540,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       }
       cacheSet(form, bag);
       setResult(bag);
+      enrichBag(bag);
       setDebugInfo({ attempts, validationErrors: errors, cached: false });
       setConfetti(c => c + 1);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
@@ -732,7 +747,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         <div className="disclosure-banner">
           <span style={{fontSize:"1.1rem"}}>ℹ️</span>
           <div>
-            <strong>Affiliate links:</strong> As an Amazon Associate this site earns from qualifying purchases — at no extra cost to you. AI suggestions are estimates; verify allergens, prices, and ages before purchasing.{" "}
+            <strong>Affiliate links:</strong> We earn a small commission when you buy through our Amazon links — at no extra cost to you. AI suggestions are estimates; verify allergens, prices, and ages before purchasing.{" "}
             <button onClick={() => setModalContent("disclosure")}>Learn more</button>
           </div>
         </div>
@@ -894,19 +909,24 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                   <div key={`${i}-${item.name}`}>
                     <div className={baseClass + stateClass} style={{borderColor:meta.color+ (isSpecial?"88":"44")}}>
                       <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
-                        <div style={{fontSize:"2.2rem",lineHeight:1,flexShrink:0}}>{item.emoji}</div>
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt="" loading="lazy"
+                            style={{width:64,height:64,objectFit:"contain",borderRadius:12,flexShrink:0,background:"#fff"}} />
+                        ) : (
+                          <div style={{fontSize:"2.2rem",lineHeight:1,flexShrink:0}}>{item.emoji}</div>
+                        )}
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:5}}>
                             <span className="cbadge" style={{background:meta.color}}>{meta.label}</span>
                             {item.quantity>1 && <span style={{fontSize:".78rem",color:"#bbb",fontWeight:700}}>×{item.quantity} per bag</span>}
                             <span style={{marginLeft:"auto",fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:meta.color}}>
-                              {itemPriceLabel(item)} <span style={{fontSize:".7rem",opacity:.7,fontFamily:"'Nunito',sans-serif",fontWeight:700}}>est</span>
+                              {itemPriceLabel(item)} {!item.asin && <span style={{fontSize:".7rem",opacity:.7,fontFamily:"'Nunito',sans-serif",fontWeight:700}}>est</span>}
                             </span>
                           </div>
                           <h3 style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:"#333",marginBottom:3}}>{item.name}</h3>
                           <p style={{fontSize:".86rem",color:"#777",lineHeight:1.45,fontWeight:600}}>{item.description}</p>
                           <div className="item-actions">
-                            <a className="amz-btn" href={amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
+                            <a className="amz-btn" href={item.detailPageURL || amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
                               📦 Shop on Amazon
                             </a>
                             <button className="swap-btn" onClick={() => replaceItem(i)}
@@ -977,7 +997,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         )}
 
         <div className="footer">
-          <p>As an Amazon Associate this site earns from qualifying purchases. This site contains Amazon affiliate links.</p>
+          <p>This site contains Amazon affiliate links. We may earn a commission at no extra cost to you.</p>
           <p style={{marginTop:6}}>Suggestions are AI-generated. Always verify age-appropriateness and allergens for your specific group.</p>
           <div className="footer-links">
             <button className="footer-link" onClick={() => setModalContent("disclosure")}>Affiliate Disclosure</button>
