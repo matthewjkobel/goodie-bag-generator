@@ -4,7 +4,9 @@ import { useState, useEffect, useRef } from "react";
 const LEGAL_CONTENT = {
   disclosure: {
     title: "Affiliate Disclosure",
-    body: `Goodie Bag Generator is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com.
+    body: `As an Amazon Associate this site earns from qualifying purchases.
+
+Goodie Bag Generator is a participant in the Amazon Services LLC Associates Program, an affiliate advertising program designed to provide a means for sites to earn advertising fees by advertising and linking to Amazon.com.
 
 When you click on a product link on this site and make a purchase, we may earn a small commission at no additional cost to you. This helps support our work and keeps the tool free to use.
 
@@ -783,7 +785,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         <div className="disclosure-banner">
           <span style={{fontSize:"1.1rem"}}>ℹ️</span>
           <div>
-            <strong>Affiliate links:</strong> We earn a small commission when you buy through our Amazon links — at no extra cost to you. AI suggestions are estimates; verify allergens, prices, and ages before purchasing.{" "}
+            <strong>As an Amazon Associate this site earns from qualifying purchases.</strong> We earn a small commission when you buy through our Amazon links — at no extra cost to you. AI suggestions are estimates; verify allergens, prices, and ages before purchasing.{" "}
             <button onClick={() => setModalContent("disclosure")}>Learn more</button>
           </div>
         </div>
@@ -1048,7 +1050,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         )}
 
         <div className="footer">
-          <p>This site contains Amazon affiliate links. We may earn a commission at no extra cost to you.</p>
+          <p>As an Amazon Associate this site earns from qualifying purchases. This site contains Amazon affiliate links; we may earn a commission at no extra cost to you.</p>
           <p style={{marginTop:6}}>Suggestions are AI-generated. Always verify age-appropriateness and allergens for your specific group.</p>
           <div className="footer-links">
             <button className="footer-link" onClick={() => setModalContent("disclosure")}>Affiliate Disclosure</button>
