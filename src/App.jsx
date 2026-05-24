@@ -356,6 +356,7 @@ export default function GoodyBagGenerator() {
   const [error, setError] = useState(null);
   const [confetti, setConfetti] = useState(0);
   const [debugInfo, setDebugInfo] = useState(null);
+  const [enrichingKeys, setEnrichingKeys] = useState(() => new Set()); // item indices still resolving
   const [modalContent, setModalContent] = useState(null); // "privacy" | "terms" | "disclosure" | null
   const [cookieConsent, setCookieConsent] = useState(() => {
     // Check if user previously accepted (using a simple in-memory flag fallback)
@@ -499,19 +500,39 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
     return JSON.parse(match ? match[0] : text);
   };
 
-  // Progressive enhancement: after a bag renders with search links, swap in real
-  // ASINs/images/prices from the Creators API. Silent on failure — search links remain.
-  const enrichBag = async (bag) => {
+  // Enrich ONE item via the server; returns the enriched item (or the original on miss/failure).
+  const enrichOneItem = async (item) => {
     try {
       const r = await fetch("/api/enrich", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: bag.items }),
+        body: JSON.stringify({ item }),
       });
-      if (!r.ok) return;
-      const { items } = await r.json();
-      setResult(prev => prev ? { ...prev, items } : prev);
-    } catch { /* keep search links */ }
+      if (!r.ok) return item;
+      const data = await r.json();
+      return data.item || item;
+    } catch { return item; }
+  };
+
+  // Progressive enhancement, STAGGERED: the bag renders instantly with search links,
+  // then items resolve ONE BY ONE (~1.1s apart to respect the 1 req/sec API limit).
+  // Cached items return fast; new ones trickle in. Each card updates as it resolves.
+  const enrichBag = async (bag) => {
+    const items = bag.items || [];
+    // Match each item to its result index by identity of name+searchQuery (stable within a render).
+    setEnrichingKeys(new Set(items.map((_, i) => i)));
+    for (let i = 0; i < items.length; i++) {
+      const enriched = await enrichOneItem(items[i]);
+      // Patch just this index into the current result; guard against a newer bag having replaced it.
+      setResult(prev => {
+        if (!prev || !prev.items || prev.items[i]?.name !== items[i].name) return prev;
+        const next = prev.items.slice();
+        next[i] = enriched;
+        return { ...prev, items: next };
+      });
+      setEnrichingKeys(prev => { const n = new Set(prev); n.delete(i); return n; });
+      if (i < items.length - 1) await new Promise(r => setTimeout(r, 1100)); // stagger
+    }
   };
 
   const generate = async (bypassCache = false) => {
@@ -637,6 +658,17 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
       setResult({ ...result, items: newItems, totalPerBag: newTotal });
       setJustSwappedIndex(itemIndex);
       setTimeout(() => setJustSwappedIndex(null), 600);
+
+      // Enrich the swapped-in item too (was previously left as a search-link-only item).
+      setEnrichingKeys(prev => { const n = new Set(prev); n.add(itemIndex); return n; });
+      const enrichedNew = await enrichOneItem(newItem);
+      setResult(prev => {
+        if (!prev || !prev.items || prev.items[itemIndex]?.name !== newItem.name) return prev;
+        const next = prev.items.slice();
+        next[itemIndex] = enrichedNew;
+        return { ...prev, items: next, totalPerBag: bagTotalRange(next).mid };
+      });
+      setEnrichingKeys(prev => { const n = new Set(prev); n.delete(itemIndex); return n; });
     } catch (e) {
       setError(`Swap failed: ${e.message}`);
     } finally {
@@ -698,6 +730,10 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         .swap-btn:disabled{opacity:.5;cursor:not-allowed}
         .swap-spin{width:13px;height:13px;border:2px solid rgba(123,47,168,0.3);border-top-color:#7B2FA8;border-radius:50%;animation:sp .7s linear infinite;display:inline-block}
         .item-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+        .finding-product{font-size:.6rem;font-weight:800;color:#CC5DE8;margin-top:4px;line-height:1.2;animation:fpPulse 1.2s ease-in-out infinite}
+        @keyframes fpPulse{0%,100%{opacity:.45}50%{opacity:1}}
+        .more-options-link{display:inline-block;margin-top:7px;font-size:.78rem;font-weight:700;color:#999;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px}
+        .more-options-link:hover{color:#CC5DE8}
         .icard.swapping{opacity:.6;transform:scale(0.98)}
         @keyframes itemPop{0%{opacity:0;transform:scale(0.94)}60%{transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
         .icard.just-swapped{animation:itemPop .5s ease-out}
@@ -901,6 +937,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                 const isSpecial = item.category==="hero" || item.category==="bag";
                 const isSwapping = swappingIndex === i;
                 const justSwapped = justSwappedIndex === i;
+                const isEnriching = enrichingKeys.has(i) && !item.imageUrl;
                 const baseClass = item.category==="hero" ? "icard hero-card"
                                 : item.category==="bag"  ? "icard bag-card"
                                 : "icard";
@@ -913,7 +950,12 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                           <img src={item.imageUrl} alt="" loading="lazy"
                             style={{width:64,height:64,objectFit:"contain",borderRadius:12,flexShrink:0,background:"#fff"}} />
                         ) : (
-                          <div style={{fontSize:"2.2rem",lineHeight:1,flexShrink:0}}>{item.emoji}</div>
+                          <div style={{width:64,flexShrink:0,textAlign:"center"}}>
+                            <div style={{fontSize:"2.2rem",lineHeight:1}}>{item.emoji}</div>
+                            {isEnriching && (
+                              <div className="finding-product">finding product…</div>
+                            )}
+                          </div>
                         )}
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:5}}>
@@ -933,13 +975,16 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                           <p style={{fontSize:".86rem",color:"#777",lineHeight:1.45,fontWeight:600}}>{item.description}</p>
                           <div className="item-actions">
                             <a className="amz-btn" href={item.detailPageURL || amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
-                              📦 Shop on Amazon
+                              🛒 Shop this item
                             </a>
                             <button className="swap-btn" onClick={() => replaceItem(i)}
                               disabled={swappingIndex !== null}>
-                              {isSwapping ? <><span className="swap-spin"/>Swapping…</> : "🔄 Swap"}
+                              {isSwapping ? <><span className="swap-spin"/>Replacing…</> : "🔄 Replace item"}
                             </button>
                           </div>
+                          <a className="more-options-link" href={amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
+                            🔍 See more options
+                          </a>
                         </div>
                       </div>
                     </div>

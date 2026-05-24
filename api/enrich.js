@@ -104,34 +104,42 @@ async function searchOne(query, token) {
   return product;
 }
 
+// Merge one AI item with its looked-up product data (or return it unchanged on miss).
+async function enrichItem(it, token) {
+  const p = await searchOne(it.searchQuery, token);
+  const matched = p && !p.miss && p.imageUrl;
+  if (!matched) return it;                       // graceful fallback: unchanged search-link item
+  return {
+    ...it,                                        // keep AI per-unit estimates intact (unitCostLow/High)
+    asin: p.asin,
+    detailPageURL: p.detailPageURL,
+    imageUrl: p.imageUrl,
+    inStock: p.inStock,                           // currently unused in UI; mapping may be off (known)
+    // packPrice = real Amazon price for the whole pack/listing (NOT per goodie-bag unit).
+    // Kept separate so the per-bag estimator keeps using AI per-unit estimates (Option C).
+    packPrice: p.price ?? null,
+  };
+}
+
 // ── Handler ───────────────────────────────────────────────────────────────────
+// Accepts EITHER { item } (single — used by the staggered per-item client flow and
+// the swap feature) OR { items } (array — used by the cache warmer / batch callers).
 export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
-    const { items } = req.body;
-    if (!Array.isArray(items)) return res.status(400).json({ error: "items array required" });
-
     const token = await getToken();
-    const out = [];
-    for (const it of items) {
-      const p = await searchOne(it.searchQuery, token);
-      const matched = p && !p.miss && p.imageUrl;
-      if (matched) {
-        out.push({
-          ...it,                                   // keep AI per-unit estimates intact (unitCostLow/High)
-          asin: p.asin,
-          detailPageURL: p.detailPageURL,
-          imageUrl: p.imageUrl,
-          inStock: p.inStock,                      // currently unused in UI; mapping may be off (known)
-          // packPrice = the real Amazon price for the whole pack/listing (NOT per goodie-bag unit).
-          // Kept separate so the per-bag estimator keeps using the AI per-unit estimates (Option C).
-          packPrice: p.price ?? null,
-        });
-      } else {
-        out.push(it);                            // graceful fallback: unchanged search-link item
-      }
+    const { item, items } = req.body;
+
+    if (item && item.searchQuery) {
+      const enriched = await enrichItem(item, token);
+      return res.status(200).json({ item: enriched });
     }
-    res.status(200).json({ items: out });
+    if (Array.isArray(items)) {
+      const out = [];
+      for (const it of items) out.push(await enrichItem(it, token));
+      return res.status(200).json({ items: out });
+    }
+    return res.status(400).json({ error: "provide { item } or { items }" });
   } catch (e) {
     // Total failure → tell the client nothing changed; the bag keeps its search links.
     res.status(500).json({ error: e.message });
