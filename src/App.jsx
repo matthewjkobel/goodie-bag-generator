@@ -732,8 +732,8 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         .item-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
         .finding-product{font-size:.6rem;font-weight:800;color:#CC5DE8;margin-top:4px;line-height:1.2;animation:fpPulse 1.2s ease-in-out infinite}
         @keyframes fpPulse{0%,100%{opacity:.45}50%{opacity:1}}
-        .more-options-link{display:inline-block;margin-top:7px;font-size:.78rem;font-weight:700;color:#999;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px}
-        .more-options-link:hover{color:#CC5DE8}
+        .more-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:30px;background:#fff;color:#999;border:2px solid #E5E5E5;font-weight:800;font-size:.78rem;cursor:pointer;text-decoration:none;transition:all .15s;font-family:'Nunito',sans-serif}
+        .more-btn:hover{background:#FAFAFA;border-color:#CC5DE8;color:#CC5DE8;transform:translateY(-2px)}
         .icard.swapping{opacity:.6;transform:scale(0.98)}
         @keyframes itemPop{0%{opacity:0;transform:scale(0.94)}60%{transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
         .icard.just-swapped{animation:itemPop .5s ease-out}
@@ -981,10 +981,10 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                               disabled={swappingIndex !== null}>
                               {isSwapping ? <><span className="swap-spin"/>Replacing…</> : "🔄 Replace item"}
                             </button>
+                            <a className="more-btn" href={amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
+                              🔍 See more options
+                            </a>
                           </div>
-                          <a className="more-options-link" href={amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
-                            🔍 See more options
-                          </a>
                         </div>
                       </div>
                     </div>
