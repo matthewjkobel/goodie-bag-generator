@@ -79,6 +79,8 @@ async function searchOne(query, token) {
 
   const j = await r.json();
   const hit = j?.searchResult?.items?.[0];
+  // DIAGNOSTIC (uncomment to inspect raw Amazon shape in Vercel logs — e.g. to fix inStock):
+  // console.log("RAW HIT:", JSON.stringify(hit, null, 2));
   if (!hit) {
     // Remember the miss briefly so we don't re-call the API for the same dud query.
     try { await redis.set(key, { miss: true }, { ex: 60 * 60 * 24 }); } catch {}
@@ -116,14 +118,14 @@ export default async function handler(req, res) {
       const matched = p && !p.miss && p.imageUrl;
       if (matched) {
         out.push({
-          ...it,
+          ...it,                                   // keep AI per-unit estimates intact (unitCostLow/High)
           asin: p.asin,
           detailPageURL: p.detailPageURL,
           imageUrl: p.imageUrl,
-          inStock: p.inStock,
-          // Replace the AI's estimate with the real price when we have one.
-          unitCostLow:  p.price ?? it.unitCostLow,
-          unitCostHigh: p.price ?? it.unitCostHigh,
+          inStock: p.inStock,                      // currently unused in UI; mapping may be off (known)
+          // packPrice = the real Amazon price for the whole pack/listing (NOT per goodie-bag unit).
+          // Kept separate so the per-bag estimator keeps using the AI per-unit estimates (Option C).
+          packPrice: p.price ?? null,
         });
       } else {
         out.push(it);                            // graceful fallback: unchanged search-link item

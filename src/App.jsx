@@ -924,6 +924,12 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                             </span>
                           </div>
                           <h3 style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:"#333",marginBottom:3}}>{item.name}</h3>
+                          {item.packPrice != null && (
+                            <p style={{fontSize:".78rem",color:"#FF9900",fontWeight:800,marginBottom:3}}>
+                              Amazon pack: ${Number(item.packPrice).toFixed(2)}
+                              {item.quantity>1 && <span style={{color:"#bbb",fontWeight:700}}> · need ×{item.quantity} per bag</span>}
+                            </p>
+                          )}
                           <p style={{fontSize:".86rem",color:"#777",lineHeight:1.45,fontWeight:600}}>{item.description}</p>
                           <div className="item-actions">
                             <a className="amz-btn" href={item.detailPageURL || amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
