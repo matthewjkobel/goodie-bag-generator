@@ -362,6 +362,9 @@ export default function GoodyBagGenerator() {
   const [bagId, setBagId] = useState(null);              // stable id for the current bag (for the return link)
   const [email, setEmail] = useState("");
   const [emailStatus, setEmailStatus] = useState(null);  // null | "sending" | "sent" | "error"
+  const [rating, setRating] = useState(0);               // 0 = none chosen yet
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingStatus, setRatingStatus] = useState(null); // null | "sending" | "sent"
   const [modalContent, setModalContent] = useState(null); // "privacy" | "terms" | "disclosure" | null
   const [cookieConsent, setCookieConsent] = useState(() => {
     // Check if user previously accepted (using a simple in-memory flag fallback)
@@ -555,6 +558,26 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
     } catch { setEmailStatus("error"); }
   };
 
+  // Rating: stars + optional comment → /api/feedback (stored in Upstash).
+  const submitRating = async (stars, withComment = false) => {
+    setRatingStatus("sending");
+    try {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bagId,
+          rating: stars,
+          comment: withComment ? ratingComment : "",
+          occasion: form.occasion,
+          ageMin: form.ageMin, ageMax: form.ageMax,
+          budget: form.budget,
+        }),
+      });
+      setRatingStatus("sent");
+    } catch { setRatingStatus("sent"); /* fail quietly — don't nag the user */ }
+  };
+
   // Return-link rehydration: if the page is opened with ?bag=<id>, load that saved bag.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -585,6 +608,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
           setResult(cached);
           setBagId(crypto.randomUUID());
           setEmailStatus(null); setEmail("");
+          setRating(0); setRatingComment(""); setRatingStatus(null);
           enrichBag(cached);
           setDebugInfo({ attempts: 0, cached: true });
           setConfetti(c => c + 1);
@@ -605,6 +629,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       setResult(bag);
       setBagId(crypto.randomUUID());
       setEmailStatus(null); setEmail("");
+      setRating(0); setRatingComment(""); setRatingStatus(null);
       enrichBag(bag);
       setDebugInfo({ attempts, validationErrors: errors, cached: false });
       setConfetti(c => c + 1);
@@ -788,6 +813,18 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         .email-btn:disabled{opacity:.6;cursor:default;transform:none}
         .email-sent{font-weight:800;color:#1D9E75;font-size:1rem}
         .email-err{color:#E03131;font-weight:700;font-size:.85rem;margin-top:8px}
+        .rating-box{max-width:520px;margin:16px auto 0;text-align:center}
+        .rating-q{font-weight:700;color:#555;margin-bottom:6px;font-size:.95rem}
+        .stars{display:flex;gap:6px;justify-content:center}
+        .star{background:none;border:none;cursor:pointer;font-size:2rem;line-height:1;color:#ddd;transition:color .12s,transform .12s;padding:0}
+        .star:hover{transform:scale(1.15)}
+        .star.on{color:#FFD93D}
+        .rating-comment{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
+        .rating-input{width:100%;max-width:420px;padding:10px 14px;border:2px solid #eee;border-radius:14px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:600;resize:vertical}
+        .rating-input:focus{outline:none;border-color:#CC5DE8}
+        .rating-send{padding:9px 20px;border-radius:30px;border:none;background:#CC5DE8;color:#fff;font-weight:800;font-size:.88rem;cursor:pointer;font-family:'Nunito',sans-serif}
+        .rating-send:hover{transform:translateY(-2px)}
+        .rating-thanks{font-weight:800;color:#1D9E75;font-size:1rem}
         .icard.swapping{opacity:.6;transform:scale(0.98)}
         @keyframes itemPop{0%{opacity:0;transform:scale(0.94)}60%{transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
         .icard.just-swapped{animation:itemPop .5s ease-out}
@@ -1092,6 +1129,33 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                     </button>
                   </div>
                   {emailStatus === "error" && <p className="email-err">Hmm, that didn't go through. Check the address and try again.</p>}
+                </>
+              )}
+            </div>
+
+            {/* Rating widget */}
+            <div className="rating-box">
+              {ratingStatus === "sent" ? (
+                <p className="rating-thanks">🙏 Thanks for the feedback!</p>
+              ) : (
+                <>
+                  <p className="rating-q">How would you rate this goodie bag?</p>
+                  <div className="stars">
+                    {[1,2,3,4,5].map(n => (
+                      <button key={n} className={"star" + (n <= rating ? " on" : "")}
+                        onClick={() => { setRating(n); submitRating(n, false); }}
+                        aria-label={`${n} star${n>1?"s":""}`}>★</button>
+                    ))}
+                  </div>
+                  {rating > 0 && (
+                    <div className="rating-comment">
+                      <textarea value={ratingComment} placeholder="Anything you'd change? (optional)"
+                        onChange={e => setRatingComment(e.target.value)} rows={2} className="rating-input" />
+                      <button className="rating-send" onClick={() => submitRating(rating, true)}>
+                        Send feedback
+                      </button>
+                    </div>
+                  )}
                 </>
               )}
             </div>
