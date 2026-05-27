@@ -559,24 +559,23 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
   };
 
   // Rating: stars + optional comment → /api/feedback (stored in Upstash).
-  const submitRating = async (stars, withComment = false) => {
-    setRatingStatus("sending");
+  // Star tap records the rating silently (so it's never lost) but keeps the
+  // comment box open. Only an explicit "Send feedback" shows the thank-you.
+  const recordRating = async (stars, comment = "") => {
     try {
       await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          bagId,
-          rating: stars,
-          comment: withComment ? ratingComment : "",
-          occasion: form.occasion,
-          ageMin: form.ageMin, ageMax: form.ageMax,
-          budget: form.budget,
+          bagId, rating: stars, comment,
+          occasion: form.occasion, ageMin: form.ageMin, ageMax: form.ageMax, budget: form.budget,
         }),
       });
-      setRatingStatus("sent");
-    } catch { setRatingStatus("sent"); /* fail quietly — don't nag the user */ }
+    } catch { /* fail quietly — don't nag over a rating */ }
   };
+
+  const pickStar = (n) => { setRating(n); recordRating(n, ""); };       // silent capture
+  const sendComment = async () => { await recordRating(rating, ratingComment); setRatingStatus("sent"); };
 
   // Return-link rehydration: if the page is opened with ?bag=<id>, load that saved bag.
   useEffect(() => {
@@ -820,6 +819,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         .star:hover{transform:scale(1.15)}
         .star.on{color:#FFD93D}
         .rating-comment{margin-top:12px;display:flex;flex-direction:column;gap:8px;align-items:center}
+        .rating-got{font-weight:700;color:#1D9E75;font-size:.85rem}
         .rating-input{width:100%;max-width:420px;padding:10px 14px;border:2px solid #eee;border-radius:14px;font-family:'Nunito',sans-serif;font-size:.95rem;font-weight:600;resize:vertical}
         .rating-input:focus{outline:none;border-color:#CC5DE8}
         .rating-send{padding:9px 20px;border-radius:30px;border:none;background:#CC5DE8;color:#fff;font-weight:800;font-size:.88rem;cursor:pointer;font-family:'Nunito',sans-serif}
@@ -1143,15 +1143,16 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                   <div className="stars">
                     {[1,2,3,4,5].map(n => (
                       <button key={n} className={"star" + (n <= rating ? " on" : "")}
-                        onClick={() => { setRating(n); submitRating(n, false); }}
+                        onClick={() => pickStar(n)}
                         aria-label={`${n} star${n>1?"s":""}`}>★</button>
                     ))}
                   </div>
                   {rating > 0 && (
                     <div className="rating-comment">
+                      <p className="rating-got">Got it — thanks! Want to add a note?</p>
                       <textarea value={ratingComment} placeholder="Anything you'd change? (optional)"
                         onChange={e => setRatingComment(e.target.value)} rows={2} className="rating-input" />
-                      <button className="rating-send" onClick={() => submitRating(rating, true)}>
+                      <button className="rating-send" onClick={sendComment}>
                         Send feedback
                       </button>
                     </div>
