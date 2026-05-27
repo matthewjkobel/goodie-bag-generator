@@ -359,6 +359,9 @@ export default function GoodyBagGenerator() {
   const [confetti, setConfetti] = useState(0);
   const [debugInfo, setDebugInfo] = useState(null);
   const [enrichingKeys, setEnrichingKeys] = useState(() => new Set()); // item indices still resolving
+  const [bagId, setBagId] = useState(null);              // stable id for the current bag (for the return link)
+  const [email, setEmail] = useState("");
+  const [emailStatus, setEmailStatus] = useState(null);  // null | "sending" | "sent" | "error"
   const [modalContent, setModalContent] = useState(null); // "privacy" | "terms" | "disclosure" | null
   const [cookieConsent, setCookieConsent] = useState(() => {
     // Check if user previously accepted (using a simple in-memory flag fallback)
@@ -537,6 +540,41 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
     }
   };
 
+  // Email-my-results: stores the bag server-side + adds the Kit subscriber → triggers the email.
+  const submitEmail = async () => {
+    if (!email || !/.+@.+\..+/.test(email)) { setEmailStatus("error"); return; }
+    if (!result || !bagId) return;
+    setEmailStatus("sending");
+    try {
+      const r = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, bagId, bag: result }),
+      });
+      setEmailStatus(r.ok ? "sent" : "error");
+    } catch { setEmailStatus("error"); }
+  };
+
+  // Return-link rehydration: if the page is opened with ?bag=<id>, load that saved bag.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get("bag");
+    if (!id) return;
+    (async () => {
+      setLoading(true);
+      try {
+        const r = await fetch(`/api/bag?id=${encodeURIComponent(id)}`);
+        if (r.ok) {
+          const { bag } = await r.json();
+          setResult(bag);
+          setBagId(id);
+          setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
+        }
+      } catch { /* ignore — user can just generate fresh */ }
+      finally { setLoading(false); }
+    })();
+  }, []);
+
   const generate = async (bypassCache = false) => {
     setLoading(true); setError(null); setResult(null); setDebugInfo(null);
     try {
@@ -545,6 +583,8 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
         const cached = cacheGet(form);
         if (cached) {
           setResult(cached);
+          setBagId(crypto.randomUUID());
+          setEmailStatus(null); setEmail("");
           enrichBag(cached);
           setDebugInfo({ attempts: 0, cached: true });
           setConfetti(c => c + 1);
@@ -563,6 +603,8 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       }
       cacheSet(form, bag);
       setResult(bag);
+      setBagId(crypto.randomUUID());
+      setEmailStatus(null); setEmail("");
       enrichBag(bag);
       setDebugInfo({ attempts, validationErrors: errors, cached: false });
       setConfetti(c => c + 1);
@@ -736,6 +778,16 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         @keyframes fpPulse{0%,100%{opacity:.45}50%{opacity:1}}
         .more-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 14px;border-radius:30px;background:#fff;color:#999;border:2px solid #E5E5E5;font-weight:800;font-size:.78rem;cursor:pointer;text-decoration:none;transition:all .15s;font-family:'Nunito',sans-serif}
         .more-btn:hover{background:#FAFAFA;border-color:#CC5DE8;color:#CC5DE8;transform:translateY(-2px)}
+        .email-capture{max-width:520px;margin:28px auto 0;background:#fff;border:2px dashed #FFD93D;border-radius:18px;padding:20px 22px;text-align:center}
+        .email-cta{font-weight:700;color:#555;margin-bottom:12px;font-size:.95rem}
+        .email-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+        .email-input{flex:1;min-width:200px;padding:12px 16px;border:2px solid #eee;border-radius:30px;font-family:'Nunito',sans-serif;font-size:1rem;font-weight:600}
+        .email-input:focus{outline:none;border-color:#FF922B}
+        .email-btn{padding:12px 22px;border-radius:30px;border:none;background:linear-gradient(135deg,#FF6B6B,#FF922B);color:#fff;font-weight:800;font-size:.95rem;cursor:pointer;font-family:'Nunito',sans-serif;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+        .email-btn:hover{transform:translateY(-2px)}
+        .email-btn:disabled{opacity:.6;cursor:default;transform:none}
+        .email-sent{font-weight:800;color:#1D9E75;font-size:1rem}
+        .email-err{color:#E03131;font-weight:700;font-size:.85rem;margin-top:8px}
         .icard.swapping{opacity:.6;transform:scale(0.98)}
         @keyframes itemPop{0%{opacity:0;transform:scale(0.94)}60%{transform:scale(1.02)}100%{opacity:1;transform:scale(1)}}
         .icard.just-swapped{animation:itemPop .5s ease-out}
@@ -1044,6 +1096,27 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                 style={{maxWidth:300,background:"linear-gradient(135deg,#CC5DE8,#4D96FF)",boxShadow:"0 6px 20px rgba(204,93,232,0.35)"}}>
                 {loading?<><span className="spin"/>Regenerating…</>:"🔄 Regenerate Ideas"}
               </button>
+            </div>
+
+            {/* Email-my-results */}
+            <div className="email-capture">
+              {emailStatus === "sent" ? (
+                <p className="email-sent">📬 Sent! Check your inbox for your goodie bag — we saved it so you can shop anytime.</p>
+              ) : (
+                <>
+                  <p className="email-cta">📧 Want this bag emailed to you? We'll send a link so you can come back and shop anytime.</p>
+                  <div className="email-row">
+                    <input type="email" value={email} placeholder="you@email.com"
+                      onChange={e => { setEmail(e.target.value); if (emailStatus) setEmailStatus(null); }}
+                      onKeyDown={e => e.key === "Enter" && submitEmail()}
+                      className="email-input" />
+                    <button className="email-btn" onClick={submitEmail} disabled={emailStatus==="sending"}>
+                      {emailStatus==="sending" ? <><span className="swap-spin"/>Sending…</> : "Email it to me"}
+                    </button>
+                  </div>
+                  {emailStatus === "error" && <p className="email-err">Hmm, that didn't go through. Check the address and try again.</p>}
+                </>
+              )}
             </div>
 
           </div>
