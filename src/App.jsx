@@ -1075,6 +1075,27 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
               })}
             </div>
 
+            {/* Email-my-results — directly below the last bag item, above the tips */}
+            <div className="email-capture">
+              {emailStatus === "sent" ? (
+                <p className="email-sent">📬 Sent! Check your inbox for your goodie bag — we saved it so you can shop anytime.</p>
+              ) : (
+                <>
+                  <p className="email-cta">📧 Want this bag emailed to you? We'll send a link so you can come back and shop anytime.</p>
+                  <div className="email-row">
+                    <input type="email" value={email} placeholder="you@email.com"
+                      onChange={e => { setEmail(e.target.value); if (emailStatus) setEmailStatus(null); }}
+                      onKeyDown={e => e.key === "Enter" && submitEmail()}
+                      className="email-input" />
+                    <button className="email-btn" onClick={submitEmail} disabled={emailStatus==="sending"}>
+                      {emailStatus==="sending" ? <><span className="swap-spin"/>Sending…</> : "Email it to me"}
+                    </button>
+                  </div>
+                  {emailStatus === "error" && <p className="email-err">Hmm, that didn't go through. Check the address and try again.</p>}
+                </>
+              )}
+            </div>
+
             <div style={{display:"grid",gap:12,marginBottom:"1.8rem"}}>
               {[
                 {icon:"📦",label:"Packaging Tip",text:result.packagingTip,bg:"#FFF8E1",border:"#FFE082"},
@@ -1096,27 +1117,6 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                 style={{maxWidth:300,background:"linear-gradient(135deg,#CC5DE8,#4D96FF)",boxShadow:"0 6px 20px rgba(204,93,232,0.35)"}}>
                 {loading?<><span className="spin"/>Regenerating…</>:"🔄 Regenerate Ideas"}
               </button>
-            </div>
-
-            {/* Email-my-results */}
-            <div className="email-capture">
-              {emailStatus === "sent" ? (
-                <p className="email-sent">📬 Sent! Check your inbox for your goodie bag — we saved it so you can shop anytime.</p>
-              ) : (
-                <>
-                  <p className="email-cta">📧 Want this bag emailed to you? We'll send a link so you can come back and shop anytime.</p>
-                  <div className="email-row">
-                    <input type="email" value={email} placeholder="you@email.com"
-                      onChange={e => { setEmail(e.target.value); if (emailStatus) setEmailStatus(null); }}
-                      onKeyDown={e => e.key === "Enter" && submitEmail()}
-                      className="email-input" />
-                    <button className="email-btn" onClick={submitEmail} disabled={emailStatus==="sending"}>
-                      {emailStatus==="sending" ? <><span className="swap-spin"/>Sending…</> : "Email it to me"}
-                    </button>
-                  </div>
-                  {emailStatus === "error" && <p className="email-err">Hmm, that didn't go through. Check the address and try again.</p>}
-                </>
-              )}
             </div>
 
           </div>
