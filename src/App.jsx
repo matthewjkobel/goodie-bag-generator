@@ -1126,6 +1126,8 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
           <p>As an Amazon Associate this site earns from qualifying purchases. This site contains Amazon affiliate links; we may earn a commission at no extra cost to you.</p>
           <p style={{marginTop:6}}>Suggestions are AI-generated. Always verify age-appropriateness and allergens for your specific group.</p>
           <div className="footer-links">
+            <a className="footer-link" href="https://goodiebaggenerator.com" target="_top" rel="noopener">🏠 Home</a>
+            <span className="footer-divider">·</span>
             <button className="footer-link" onClick={() => setModalContent("disclosure")}>Affiliate Disclosure</button>
             <span className="footer-divider">·</span>
             <button className="footer-link" onClick={() => setModalContent("privacy")}>Privacy Policy</button>

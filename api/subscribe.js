@@ -19,7 +19,8 @@ const KIT_API = "https://api.kit.com/v4";
 const KIT_KEY = process.env.KIT_API_KEY;
 const KIT_TAG_ID = process.env.KIT_TAG_ID;            // numeric id of `goodie-bag-generated`
 const BAG_TTL = 60 * 60 * 24 * 60;                    // 60 days (SETTLED, runbook §1.4)
-const RETURN_BASE = "https://goodiebaggenerator.com"; // return link target
+const RETURN_BASE = "https://generator.goodiebaggenerator.com"; // tool's own URL — the React app
+// reads ?bag= directly here. (Root domain serves the tool in an iframe that can't see the parent's query string.)
 
 function kitHeaders() {
   return { "Content-Type": "application/json", "X-Kit-Api-Key": KIT_KEY };
