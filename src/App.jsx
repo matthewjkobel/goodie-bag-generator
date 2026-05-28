@@ -788,8 +788,6 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         .tip-box{border-radius:16px;padding:1rem 1.2rem;font-size:.92rem;font-weight:600;display:flex;gap:10px;align-items:flex-start}
         .spin{width:20px;height:20px;border:3px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
         @keyframes sp{to{transform:rotate(360deg)}}
-        .bar-bg{height:10px;background:#F0F0F0;border-radius:99px;overflow:hidden;margin-top:6px}
-        .bar-fill{height:100%;border-radius:99px;transition:width .8s ease}
         .err-box{background:#FFF0F0;border:2px solid #FFB3B3;border-radius:16px;padding:1rem 1.2rem;color:#C0392B;font-weight:700;margin-bottom:1.5rem;font-size:.9rem;word-break:break-word}
         .amz-btn{display:inline-flex;align-items:center;gap:5px;padding:8px 16px;border-radius:30px;background:#FF9900;color:#fff;font-weight:800;font-size:.82rem;text-decoration:none;box-shadow:0 2px 8px rgba(255,153,0,0.4);transition:transform .15s,box-shadow .15s}
         .amz-btn:hover{transform:translateY(-2px);box-shadow:0 5px 14px rgba(255,153,0,0.5)}
@@ -931,7 +929,7 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                 <span style={{position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",fontWeight:800,color:"#bbb"}}>$</span>
                 <input className="finput" type="number" name="budget" min="1" max="100" step="0.5" value={form.budget} onChange={handleChange} style={{paddingLeft:28}}/>
               </div>
-              <p style={{fontSize:".78rem",color:"#bbb",marginTop:4,fontWeight:600}}>Total est. ${totalEst}</p>
+              <p style={{fontSize:".72rem",color:"#ccc",marginTop:4,fontWeight:600}}>Rough plan: ${totalEst} for {form.count||0} bags</p>
             </div>
           </div>
 
@@ -976,37 +974,27 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
               <p style={{color:"#999",fontWeight:600,marginTop:4}}>{result.tagline}</p>
               <div style={{maxWidth:380,margin:"1.2rem auto 0"}}>
                 {(() => {
-                  const range = bagTotalRange(result.items || []);
-                  const budget = parseFloat(form.budget);
-                  const overBudget = range.mid > budget;
-                  const count = parseInt(form.count) || 0;
-                  const showRange = range.low !== range.high;
+                  const items = result.items || [];
+                  const enrichedItems = items.filter(it => it.packPrice != null);
+                  const cartTotal = enrichedItems.reduce((s, it) => s + Number(it.packPrice || 0), 0);
+                  const stillResolving = enrichingKeys.size > 0;
+                  const allEnriched = enrichedItems.length === items.length && items.length > 0;
                   return (
                     <>
-                      <div style={{display:"flex",justifyContent:"space-between",fontSize:".82rem",fontWeight:700,color:"#888"}}>
-                        <span>Est. cost per bag</span>
-                        <span style={{color: overBudget ? "#FF6B6B" : "#6BCB77"}}>
-                          {showRange
-                            ? `$${range.low.toFixed(2)}–${range.high.toFixed(2)}`
-                            : `$${range.mid.toFixed(2)}`} / ${budget.toFixed(2)}
-                        </span>
+                      <div style={{textAlign:"center"}}>
+                        <p style={{fontSize:".78rem",fontWeight:700,color:"#888",letterSpacing:".3px",textTransform:"uppercase"}}>
+                          Everything here on Amazon
+                        </p>
+                        <p style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.8rem",color:"#FF9900",marginTop:2}}>
+                          {enrichedItems.length === 0
+                            ? <span style={{fontSize:"1rem",color:"#bbb"}}>calculating…</span>
+                            : <>≈ ${cartTotal.toFixed(2)}{!allEnriched && <span style={{fontSize:".7rem",color:"#bbb",fontWeight:700,marginLeft:6}}>so far</span>}</>
+                          }
+                        </p>
+                        <p style={{fontSize:".72rem",color:"#bbb",fontWeight:600,marginTop:2,fontStyle:"italic"}}>
+                          Real Amazon pack prices for items found{stillResolving && enrichedItems.length > 0 ? " · loading more…" : ""}
+                        </p>
                       </div>
-                      <div className="bar-bg">
-                        <div className="bar-fill" style={{
-                          width: `${Math.min(100,(range.mid/budget)*100)}%`,
-                          background: overBudget
-                            ? "linear-gradient(90deg,#FFD93D,#FF6B6B)"
-                            : "linear-gradient(90deg,#6BCB77,#4CAF50)"
-                        }}/>
-                      </div>
-                      <p style={{fontSize:".78rem",color:"#bbb",marginTop:4,fontWeight:600,textAlign:"center"}}>
-                        {count} bags ≈ {showRange
-                          ? `$${(range.low*count).toFixed(2)}–${(range.high*count).toFixed(2)}`
-                          : `$${(range.mid*count).toFixed(2)}`} total
-                      </p>
-                      <p style={{fontSize:".7rem",color:"#bbb",marginTop:2,fontWeight:600,textAlign:"center",fontStyle:"italic"}}>
-                        Prices are estimates — verify on Amazon before purchasing
-                      </p>
                     </>
                   );
                 })()}
@@ -1052,17 +1040,23 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                           <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:8,marginBottom:5}}>
                             <span className="cbadge" style={{background:meta.color}}>{meta.label}</span>
                             {item.quantity>1 && <span style={{fontSize:".78rem",color:"#bbb",fontWeight:700}}>×{item.quantity} per bag</span>}
-                            <span style={{marginLeft:"auto",fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:meta.color}}>
-                              {itemPriceLabel(item)} {!item.asin && <span style={{fontSize:".7rem",opacity:.7,fontFamily:"'Nunito',sans-serif",fontWeight:700}}>est</span>}
+                            <span style={{marginLeft:"auto",textAlign:"right"}}>
+                              {item.packPrice != null ? (
+                                <span style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:"#FF9900"}}>
+                                  ${Number(item.packPrice).toFixed(2)}
+                                </span>
+                              ) : isEnriching ? (
+                                <span style={{fontSize:".75rem",color:"#bbb",fontWeight:700,fontStyle:"italic"}}>
+                                  price loading…
+                                </span>
+                              ) : (
+                                <span style={{fontSize:".75rem",color:"#bbb",fontWeight:700}}>
+                                  ≈ {itemPriceLabel(item)} <span style={{opacity:.8}}>per-bag share (est)</span>
+                                </span>
+                              )}
                             </span>
                           </div>
                           <h3 style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:"#333",marginBottom:3}}>{item.name}</h3>
-                          {item.packPrice != null && (
-                            <p style={{fontSize:".78rem",color:"#FF9900",fontWeight:800,marginBottom:3}}>
-                              Amazon pack: ${Number(item.packPrice).toFixed(2)}
-                              {item.quantity>1 && <span style={{color:"#bbb",fontWeight:700}}> · need ×{item.quantity} per bag</span>}
-                            </p>
-                          )}
                           <p style={{fontSize:".86rem",color:"#777",lineHeight:1.45,fontWeight:600}}>{item.description}</p>
                           <div className="item-actions">
                             <a className="amz-btn" href={item.detailPageURL || amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
