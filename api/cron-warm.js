@@ -16,12 +16,12 @@
 //      AI-style item shape (no image/asin until their slice runs).
 //
 // Why daily-slice instead of one big every-6-days run:
-//   - Creators API rate limit is 1 TPS. 57 queries × 1.1s ≈ 63s — that's
+//   - Creators API rate limit is 1 TPS. 56 queries × 1.1s ≈ 62s — that's
 //     OVER the Hobby maxDuration cap (60s). A single mega-run would silently
 //     time out partway through.
 //   - 10 queries/run × ~1.1s = ~11s. Token fetch + Upstash reads/writes add
 //     ~2s. Total ~12-15s, comfortably under maxDuration: 60.
-//   - Slice rotation cycles every 6 days (Math.ceil(57/10) = 6), 1 day inside
+//   - Slice rotation cycles every 6 days (Math.ceil(56/10) = 6), 1 day inside
 //     the 7-day product TTL. Margin is thin but works as long as the cron runs.
 //
 // What ISN'T here:
