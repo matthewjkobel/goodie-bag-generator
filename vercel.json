@@ -1,7 +1,9 @@
 {
   "functions": {
-    "api/generate.js": {
-      "maxDuration": 30
-    }
-  }
+    "api/generate.js":  { "maxDuration": 30 },
+    "api/cron-warm.js": { "maxDuration": 60 }
+  },
+  "crons": [
+    { "path": "/api/cron-warm", "schedule": "0 6 * * *" }
+  ]
 }
