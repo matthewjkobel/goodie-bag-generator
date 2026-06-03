@@ -13,6 +13,7 @@
 // ---------------------------------------------------------------------------
 
 import { Redis } from "@upstash/redis";
+import { PRESET_QUERIES } from "./presets.js";
 
 const redis = new Redis({
   url: process.env.KV_REST_API_URL,
@@ -28,7 +29,7 @@ const CACHE_TTL   = 60 * 60 * 24 * 7;
 // ── The queries worth warming ─────────────────────────────────────────────────
 // Start with high-frequency recurring items. Add your prebuilt-bag item
 // searchQueries here (or load them from a JSON file) as those get built.
-const QUERIES = [
+const GENERIC_QUERIES = [
   // universal heroes
   "ring pops variety pack", "smarties candy bulk", "glow sticks bulk party",
   "kids sunglasses bulk pack", "temporary tattoos kids bulk", "bouncy balls bulk assorted",
@@ -42,6 +43,9 @@ const QUERIES = [
   "halloween party favors bulk", "valentines cards kids classroom",
   "easter egg fillers bulk", "christmas party favors kids",
 ];
+
+// Bootstrap: generic recurring items + every prebuilt-preset item, deduped.
+const QUERIES = [...new Set([...GENERIC_QUERIES, ...PRESET_QUERIES])];
 
 let tokenCache = { value: null, expiresAt: 0 };
 async function getToken() {
