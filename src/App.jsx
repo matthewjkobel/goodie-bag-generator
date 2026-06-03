@@ -577,19 +577,23 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
   const pickStar = (n) => { setRating(n); recordRating(n, ""); };       // silent capture
   const sendComment = async () => { await recordRating(rating, ratingComment); setRatingStatus("sent"); };
 
-  // Return-link rehydration: if the page is opened with ?bag=<id>, load that saved bag.
+  // Deep-link rehydration: ?bag=<id> loads a saved bag; ?preset=<key> loads a prebuilt themed bag.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const id = params.get("bag");
-    if (!id) return;
+    const bagId = params.get("bag");
+    const presetKey = params.get("preset");
+    if (!bagId && !presetKey) return;
     (async () => {
       setLoading(true);
       try {
-        const r = await fetch(`/api/bag?id=${encodeURIComponent(id)}`);
+        const url = bagId
+          ? `/api/bag?id=${encodeURIComponent(bagId)}`
+          : `/api/preset?key=${encodeURIComponent(presetKey)}`;
+        const r = await fetch(url);
         if (r.ok) {
           const { bag } = await r.json();
           setResult(bag);
-          setBagId(id);
+          setBagId(bagId || crypto.randomUUID());
           setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
         }
       } catch { /* ignore — user can just generate fresh */ }
@@ -631,6 +635,36 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       setRating(0); setRatingComment(""); setRatingStatus(null);
       enrichBag(bag);
       setDebugInfo({ attempts, validationErrors: errors, cached: false });
+      setConfetti(c => c + 1);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Quick-pick: load a prebuilt, fully-enriched themed bag straight from /api/preset.
+  // No enrichBag / no /api/generate — the preset is already enriched, which is the speed win.
+  const loadPreset = async (presetKey) => {
+    setLoading(true); setError(null); setResult(null); setDebugInfo(null);
+    try {
+      const r = await fetch(`/api/preset?key=${encodeURIComponent(presetKey)}`);
+      if (!r.ok) {
+        // Graceful fallback: if the preset hasn't been warmed yet (cron not run,
+        // or first days of bootstrap), tell the user and let them generate normally.
+        if (r.status === 404) {
+          setError("This themed bag isn't ready yet — try generating one with the form below.");
+        } else {
+          setError("Couldn't load that themed bag right now.");
+        }
+        return;
+      }
+      const { bag } = await r.json();
+      setResult(bag);
+      setBagId(crypto.randomUUID());
+      setEmailStatus(null); setEmail("");
+      setRating(0); setRatingComment(""); setRatingStatus(null);
       setConfetti(c => c + 1);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
     } catch (e) {
@@ -876,6 +910,43 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
             <button onClick={() => setModalContent("disclosure")}>Learn more</button>
           </div>
         </div>
+
+        {/* Quick-pick prebuilt themed bags — hidden once a bag is showing */}
+        {!result && (
+          <div style={{margin:"0 0 1.5rem 0"}}>
+            <p style={{fontSize:14,color:"#666",margin:"0 0 8px 0",textAlign:"center"}}>
+              Or jump straight into a themed bag:
+            </p>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center"}}>
+              {[
+                { key:"bluey",       label:"🐶 Bluey" },
+                { key:"paw-patrol",  label:"🚒 Paw Patrol" },
+                { key:"spidey",      label:"🕷️ Spidey" },
+                { key:"minecraft",   label:"⛏️ Minecraft" },
+                { key:"pokemon",     label:"⚡ Pokémon" },
+                { key:"super-mario", label:"🍄 Super Mario" },
+              ].map(p => (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => loadPreset(p.key)}
+                  disabled={loading}
+                  style={{
+                    padding:"8px 14px",
+                    border:"1px solid #ddd",
+                    background:"#fff",
+                    borderRadius:999,
+                    cursor:loading ? "wait" : "pointer",
+                    fontSize:14,
+                    fontWeight:500,
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="card" style={{marginBottom:"2rem"}}>
 
