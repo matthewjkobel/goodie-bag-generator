@@ -107,7 +107,7 @@ export const PRESETS = {
       { name: "Pokemon Coloring Activity Pack", emoji: "⭐", description: "Coloring book, jumbo crayons, and a trading card in a resealable pouch.", unitCostLow: 1.20, unitCostHigh: 2.00, quantity: 1, searchQuery: "Pokemon coloring activity packs party favors", category: "hero" },
       { name: "Pokemon Eraser Set with Cards", emoji: "🎁", description: "Shaped erasers (Charmander, Bulbasaur, Squirtle, Pokeball) plus trading cards and stickers.", unitCostLow: 0.80, unitCostHigh: 1.40, quantity: 1, searchQuery: "Pokemon erasers party favor set cards stickers", category: "toy" },
       { name: "Pokemon Pencils and Erasers", emoji: "✏️", description: "Mechanical pencils with shaped erasers — Pikachu, Gengar, Charizard.", unitCostLow: 0.60, unitCostHigh: 1.10, quantity: 1, searchQuery: "Pokemon mechanical pencils erasers party favors bulk", category: "stationery" },
-      { name: "Pokemon Stampers and Pencils", emoji: "✏️", description: "Reusable stampers paired with pencils — survive years of after-school crafts.", unitCostLow: 0.70, unitCostHigh: 1.30, quantity: 1, searchQuery: "Pokemon stampers pencils party favors", category: "stationery" },
+      { name: "Pokemon Party Bracelets", emoji: "💫", description: "Officially licensed rubber wristbands — kids wear their favorite Pokemon home.", unitCostLow: 0.40, unitCostHigh: 0.80, quantity: 1, searchQuery: "Pokemon rubber bracelets party favors bulk", category: "toy" },
       { name: "Pokemon Temporary Tattoos", emoji: "💪", description: "70-count sheet — pick a favorite Pokemon to wear all week.", unitCostLow: 0.15, unitCostHigh: 0.30, quantity: 2, searchQuery: "Pokemon temporary tattoos party favors bulk", category: "toy" },
     ],
   },
