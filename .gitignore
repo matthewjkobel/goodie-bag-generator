@@ -25,3 +25,9 @@ dist-ssr
 .vercel
 .env*
 feedback-export-*.csv
+
+# Local-only spec/planning docs (dated copies). Kept in docs/ for organization
+# but never pushed to GitHub. Untimestamped docs (e.g. app-jsx-integration.md)
+# remain tracked normally.
+docs/goodie-bag-build-runbook_*.md
+docs/goodie-bag-prd_*.md
