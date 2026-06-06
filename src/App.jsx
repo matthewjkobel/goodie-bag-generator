@@ -342,6 +342,103 @@ function cacheSet(form, bag) {
   }
 }
 
+// ─── Popular-themes quick-pick strip ─────────────────────────────────────────
+// Horizontal scroll-strip of prebuilt themed bags. Tapping a chip calls
+// loadPreset(key) — instant load of the already-warmed bag (no /api/generate,
+// no enrichBag stagger). Label and live preset key are decoupled: only the
+// display label changed for Spider-Man; the `spidey` key/URL-param is unchanged.
+const PRESET_THEMES = [
+  { key: "bluey",       label: "Bluey",       emoji: "🐶" },
+  { key: "paw-patrol",  label: "Paw Patrol",  emoji: "🐾" },
+  { key: "spidey",      label: "Spider-Man",  emoji: "🕷️" },
+  { key: "minecraft",   label: "Minecraft",   emoji: "⛏️" },
+  { key: "pokemon",     label: "Pokémon",     emoji: "⚡" },
+  { key: "super-mario", label: "Super Mario", emoji: "🍄" },
+];
+
+function PopularThemes({ onPick, disabled }) {
+  const ref = useRef(null);
+  const [canRight, setCanRight] = useState(false);
+  const [canLeft, setCanLeft] = useState(false);
+
+  const update = () => {
+    const el = ref.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 1);
+    setCanRight(el.scrollWidth > el.scrollLeft + el.clientWidth + 1);
+  };
+
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      ro.disconnect();
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, []);
+
+  const nudge = (dir) => {
+    const el = ref.current;
+    if (el) el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+  };
+
+  // Round, dependency-free arrow affordance (mouse/trackpad discoverability).
+  const arrowStyle = (side) => ({
+    position: "absolute", [side]: -6, top: "50%", transform: "translateY(-50%)",
+    zIndex: 2, width: 30, height: 30, borderRadius: "50%", border: "2px solid #F0E6FF",
+    background: "#fff", color: "#7B2FA8", fontWeight: 700, fontSize: "1.1rem", lineHeight: 1,
+    cursor: "pointer", boxShadow: "0 2px 8px rgba(0,0,0,0.12)", padding: 0,
+    display: "flex", alignItems: "center", justifyContent: "center",
+  });
+
+  return (
+    <div style={{ marginBottom: "1.6rem" }}>
+      <label className="flabel">🔥 Popular themes</label>
+      <div style={{ position: "relative" }}>
+        {canLeft && (
+          <button type="button" aria-label="Scroll themes left" onClick={() => nudge(-1)} style={arrowStyle("left")}>
+            <span aria-hidden="true">‹</span>
+          </button>
+        )}
+        <div
+          ref={ref}
+          role="group"
+          aria-label="Popular party themes — tap one for an instant pre-built bag"
+          style={{
+            display: "flex", gap: 10, overflowX: "auto", scrollSnapType: "x proximity",
+            WebkitOverflowScrolling: "touch", paddingBottom: 4, scrollbarWidth: "thin",
+          }}
+        >
+          {PRESET_THEMES.map((t) => (
+            <button
+              key={t.key}
+              type="button"
+              className="occ-btn"
+              disabled={disabled}
+              onClick={() => onPick(t.key)}
+              onFocus={(e) => e.currentTarget.scrollIntoView({ inline: "nearest", block: "nearest" })}
+              style={{ flex: "0 0 auto", scrollSnapAlign: "start", whiteSpace: "nowrap", cursor: disabled ? "wait" : "pointer" }}
+            >
+              <span aria-hidden="true" style={{ marginRight: 6 }}>{t.emoji}</span>{t.label}
+            </button>
+          ))}
+        </div>
+        {canRight && (
+          <button type="button" aria-label="Scroll themes right" onClick={() => nudge(1)} style={arrowStyle("right")}>
+            <span aria-hidden="true">›</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function GoodyBagGenerator() {
   const [form, setForm] = useState({
@@ -911,42 +1008,8 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
           </div>
         </div>
 
-        {/* Quick-pick prebuilt themed bags — hidden once a bag is showing */}
-        {!result && (
-          <div style={{margin:"0 0 1.5rem 0"}}>
-            <p style={{fontSize:14,color:"#666",margin:"0 0 8px 0",textAlign:"center"}}>
-              Or jump straight into a themed bag:
-            </p>
-            <div style={{display:"flex",flexWrap:"wrap",gap:8,justifyContent:"center"}}>
-              {[
-                { key:"bluey",       label:"🐶 Bluey" },
-                { key:"paw-patrol",  label:"🚒 Paw Patrol" },
-                { key:"spidey",      label:"🕷️ Spidey" },
-                { key:"minecraft",   label:"⛏️ Minecraft" },
-                { key:"pokemon",     label:"⚡ Pokémon" },
-                { key:"super-mario", label:"🍄 Super Mario" },
-              ].map(p => (
-                <button
-                  key={p.key}
-                  type="button"
-                  onClick={() => loadPreset(p.key)}
-                  disabled={loading}
-                  style={{
-                    padding:"8px 14px",
-                    border:"1px solid #ddd",
-                    background:"#fff",
-                    borderRadius:999,
-                    cursor:loading ? "wait" : "pointer",
-                    fontSize:14,
-                    fontWeight:500,
-                  }}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        {/* Popular-themes quick-pick strip — hidden once a bag is showing */}
+        {!result && <PopularThemes onPick={loadPreset} disabled={loading} />}
 
         <div className="card" style={{marginBottom:"2rem"}}>
 
