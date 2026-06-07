@@ -357,6 +357,8 @@ const PRESET_THEMES = [
   { key: "minecraft",   label: "Minecraft",   emoji: "⛏️" },
   { key: "pokemon",     label: "Pokémon",     emoji: "⚡" },
   { key: "super-mario", label: "Super Mario", emoji: "🍄" },
+  { key: "disney-princess", label: "Disney Princess", emoji: "👑" },
+  { key: "mickey-mouse",    label: "Mickey Mouse",   emoji: "🐭" },
 ];
 
 function PopularThemes({ onPick, disabled }) {

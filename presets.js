@@ -127,6 +127,38 @@ export const PRESETS = {
       { name: "Super Mario Notepads and Pencils", emoji: "✏️", description: "Mini notepads plus pencils — confirm officially licensed Super Mario, not generic.", unitCostLow: 0.60, unitCostHigh: 1.10, quantity: 1, searchQuery: "Super Mario notepads pencils party favors", category: "stationery" },
     ],
   },
+
+  "disney-princess": {
+    theme: "Disney Princess Royal Ball Bag",
+    tagline: "A little royalty for every guest.",
+    packagingTip: "Use the Disney Princess favor bags as the container, or clear cello bags tied with pink and gold curling ribbon for a royal-ball finish.",
+    teacherTip: "Sticker and tattoo sheets split into individual classroom rewards. Disney licensing is heavily counterfeited — confirm every listing says 'Officially licensed Disney Princess,' not generic 'princess.'",
+    funActivity: "'Pass the crown' musical game — when the music stops, whoever holds the crown strikes a royal pose.",
+    items: [
+      { name: "Disney Princess Favor Bags", emoji: "🛍️", description: "Officially licensed Disney Princess favor bags — Belle, Ariel, Cinderella, and more; the bag IS part of the gift.", unitCostLow: 0.60, unitCostHigh: 1.10, quantity: 1, searchQuery: "Disney Princess party favor goodie bags bulk", category: "bag" },
+      { name: "Disney Princess Activity Pack", emoji: "⭐", description: "Mini coloring book, crayons, and stickers — an instant royal craft kit.", unitCostLow: 1.10, unitCostHigh: 1.80, quantity: 1, searchQuery: "Disney Princess mini coloring play packs party favors", category: "hero" },
+      { name: "Disney Princess Sticker Sheets", emoji: "⭐", description: "Sheets of princess stickers for notebooks, water bottles, and lunchboxes.", unitCostLow: 0.20, unitCostHigh: 0.40, quantity: 1, searchQuery: "Disney Princess sticker sheets party favors bulk", category: "craft" },
+      { name: "Disney Princess Favor Box", emoji: "🎁", description: "Surprise box with princess stickers, tattoos, or a self-inking stamper inside.", unitCostLow: 0.50, unitCostHigh: 0.90, quantity: 1, searchQuery: "Disney Princess party favor boxes stickers stampers", category: "activity" },
+      { name: "Disney Princess Temporary Tattoos", emoji: "💪", description: "Easy-on tattoos kids love showing off all week.", unitCostLow: 0.15, unitCostHigh: 0.30, quantity: 2, searchQuery: "Disney Princess temporary tattoos kids bulk", category: "toy" },
+      { name: "Disney Princess Pencils and Erasers", emoji: "✏️", description: "Mechanical pencils with shaped erasers — survive a backpack.", unitCostLow: 0.50, unitCostHigh: 0.90, quantity: 1, searchQuery: "Disney Princess pencils erasers party favors", category: "stationery" },
+    ],
+  },
+
+  "mickey-mouse": {
+    theme: "Mickey Mouse & Friends Clubhouse Bag",
+    tagline: "Oh boy! A clubhouse favor for everyone.",
+    packagingTip: "Use the Mickey Mouse favor bags as the container, or red cello bags with black curling ribbon for the classic Mickey look.",
+    teacherTip: "Play packs and sticker sheets double as non-candy classroom rewards. Disney licensing is heavily counterfeited — confirm 'Officially licensed Disney Mickey Mouse' on every item.",
+    funActivity: "'Hot Dog' freeze dance — play the Hot Dog song and everyone freezes in a Mickey pose when it stops.",
+    items: [
+      { name: "Mickey Mouse Favor Bags", emoji: "🛍️", description: "Officially licensed Mickey Mouse & Friends favor bags — the container that fits the theme.", unitCostLow: 0.60, unitCostHigh: 1.10, quantity: 1, searchQuery: "Mickey Mouse party favor goodie bags bulk", category: "bag" },
+      { name: "Mickey Mouse Play Pack", emoji: "⭐", description: "Coloring pad, mini crayons, and a sticker — grab-and-go clubhouse fun.", unitCostLow: 0.90, unitCostHigh: 1.50, quantity: 1, searchQuery: "Mickey Mouse play pack coloring crayons party favors", category: "hero" },
+      { name: "Mickey Mouse Favor Box", emoji: "🎁", description: "Surprise box with Mickey stickers, tattoos, or a self-inking stamper inside.", unitCostLow: 0.50, unitCostHigh: 0.90, quantity: 1, searchQuery: "Disney Mickey Mouse self inking stamps party favors", category: "activity" },
+      { name: "Mickey Mouse Sticker Sheets", emoji: "⭐", description: "Mickey, Minnie, Donald, and Goofy — for notebooks, water bottles, and lunchboxes.", unitCostLow: 0.20, unitCostHigh: 0.40, quantity: 1, searchQuery: "Mickey Mouse sticker sheets party favors bulk", category: "craft" },
+      { name: "Mickey Mouse Temporary Tattoos", emoji: "💪", description: "Clubhouse tattoos kids love wearing to school.", unitCostLow: 0.15, unitCostHigh: 0.30, quantity: 2, searchQuery: "Mickey Mouse temporary tattoos kids bulk", category: "toy" },
+      { name: "Mickey Mouse Pencils and Erasers", emoji: "✏️", description: "Mechanical pencils with shaped erasers — survive a backpack.", unitCostLow: 0.50, unitCostHigh: 0.90, quantity: 1, searchQuery: "Mickey Mouse pencils erasers party favors", category: "stationery" },
+    ],
+  },
 };
 
 // Flat list of every unique searchQuery the cron needs to keep warm,
