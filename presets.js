@@ -65,17 +65,17 @@ export const PRESETS = {
   },
 
   spidey: {
-    theme: "Spidey Team-Up Bag",
+    theme: "Spider-Man Team-Up Bag",
     tagline: "Go webs! Suit up your whole crew.",
     packagingTip: "Red Spider-Man mini totes as the container; add a web of white curling ribbon for the spider effect.",
     teacherTip: "Spidey sticker and tattoo sheets split easily into individual rewards. Marvel licensing is heavily counterfeited — verify 'Officially licensed Marvel' on every item.",
     funActivity: "'Web slinger' target toss — toss yarn balls at a paper spider web taped to the wall.",
     items: [
       { name: "Spider-Man Reusable Mini Tote", emoji: "🛍️", description: "Officially licensed Marvel mini tote — the bag IS the favor.", unitCostLow: 1.20, unitCostHigh: 2.20, quantity: 1, searchQuery: "Spiderman party favor goodie bags totes bulk", category: "bag" },
-      { name: "Spidey Activity Pack", emoji: "⭐", description: "Mini coloring book, crayons, and a loot bag — instant Spidey kit.", unitCostLow: 1.10, unitCostHigh: 1.80, quantity: 1, searchQuery: "Spiderman activity packs coloring crayons party favors", category: "hero" },
-      { name: "Spidey Stickers and Tattoos Set", emoji: "💪", description: "Sticker sheets plus temporary tattoos — Spidey, Ghost-Spider, Miles, and friends.", unitCostLow: 0.60, unitCostHigh: 1.00, quantity: 1, searchQuery: "Spidey stickers tattoos party favors set", category: "craft" },
+      { name: "Spider-Man Activity Pack", emoji: "⭐", description: "Mini coloring book, crayons, and a loot bag — instant Spidey kit.", unitCostLow: 1.10, unitCostHigh: 1.80, quantity: 1, searchQuery: "Spiderman activity packs coloring crayons party favors", category: "hero" },
+      { name: "Spider-Man Stickers and Tattoos Set", emoji: "💪", description: "Sticker sheets plus temporary tattoos — Spidey, Ghost-Spider, Miles, and friends.", unitCostLow: 0.60, unitCostHigh: 1.00, quantity: 1, searchQuery: "Spidey stickers tattoos party favors set", category: "craft" },
       { name: "Spider-Man Favor Box", emoji: "🎁", description: "Surprise box with stickers, tattoos, or a self-inking stamper inside.", unitCostLow: 0.50, unitCostHigh: 0.90, quantity: 1, searchQuery: "Spiderman party favor boxes stickers tattoos stampers", category: "activity" },
-      { name: "Spidey and Friends Sticker Sheets", emoji: "⭐", description: "Peter Parker, Miles Morales, and Gwen — the whole team.", unitCostLow: 0.20, unitCostHigh: 0.40, quantity: 1, searchQuery: "Spidey Amazing Friends sticker sheets", category: "craft" },
+      { name: "Spider-Man and Friends Sticker Sheets", emoji: "⭐", description: "Peter Parker, Miles Morales, and Gwen — the whole team.", unitCostLow: 0.20, unitCostHigh: 0.40, quantity: 1, searchQuery: "Spidey Amazing Friends sticker sheets", category: "craft" },
       { name: "Spider-Man Temporary Tattoos", emoji: "💪", description: "Web-slinger tattoos kids love showing off all week.", unitCostLow: 0.15, unitCostHigh: 0.30, quantity: 2, searchQuery: "Spider-Man temporary tattoos kids bulk", category: "toy" },
     ],
   },
