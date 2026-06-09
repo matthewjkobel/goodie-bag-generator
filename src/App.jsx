@@ -86,6 +86,10 @@ const AMAZON_TAG = "smawormom06-20";
 const amazonLink = (q) =>
   `https://www.amazon.com/s?k=${encodeURIComponent(q)}&tag=${AMAZON_TAG}`;
 
+// Fire-and-forget GA4 event. Optional-chained so an ad blocker (no gtag) can't throw.
+// Send only booleans/counts/labels — never the email address or comment text.
+const track = (event, params = {}) => { try { window.gtag?.("event", event, params); } catch {} };
+
 // ─── Price range helpers ─────────────────────────────────────────────────────
 // Items may have either {unitCostLow, unitCostHigh} (preferred) or {unitCost} (legacy).
 // These helpers normalize both shapes so the rest of the code doesn't care.
@@ -417,6 +421,7 @@ export default function GoodyBagGenerator() {
     catch { return false; }
   });
   const resultsRef = useRef(null);
+  const bagSourceRef = useRef(null);   // last bag_rendered source — attached to downstream events
 
   const acceptCookies = () => {
     setCookieConsent(true);
@@ -599,6 +604,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, bagId, bag: result }),
       });
+      if (r.ok) track("email_signup", { bag_source: bagSourceRef.current });
       setEmailStatus(r.ok ? "sent" : "error");
     } catch { setEmailStatus("error"); }
   };
@@ -619,7 +625,10 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
     } catch { /* fail quietly — don't nag over a rating */ }
   };
 
-  const pickStar = (n) => { setRating(n); recordRating(n, ""); };       // silent capture
+  const pickStar = (n) => {
+    track("rating_submitted", { stars: n, has_comment: !!ratingComment });
+    setRating(n); recordRating(n, "");
+  };       // silent capture
   const sendComment = async () => { await recordRating(rating, ratingComment); setRatingStatus("sent"); };
 
   // Deep-link rehydration: ?bag=<id> loads a saved bag; ?preset=<key> loads a prebuilt themed bag.
@@ -638,6 +647,8 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
         if (r.ok) {
           const { bag } = await r.json();
           setResult(bag);
+          bagSourceRef.current = "return_link";
+          track("bag_rendered", { source: "return_link", item_count: bag.items?.length });
           setBagId(bagId || crypto.randomUUID());
           setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
         }
@@ -647,6 +658,14 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
   }, []);
 
   const generate = async (bypassCache = false) => {
+    track("generate_clicked", {
+      occasion: form.occasion,
+      age_range: `${form.ageMin}-${form.ageMax}`,
+      budget: form.budget,
+      bag_style: form.bagStyle,
+      include_food: form.includeFood,
+      allergy_count: form.allergies.length,
+    });
     setLoading(true); setError(null); setResult(null); setDebugInfo(null);
     try {
       // Cache hit shortcut: same inputs return cached result instantly, no API call
@@ -654,6 +673,8 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
         const cached = cacheGet(form);
         if (cached) {
           setResult(cached);
+          bagSourceRef.current = "cache";
+          track("bag_rendered", { source: "cache", item_count: cached.items?.length, attempts: 0 });
           setBagId(crypto.randomUUID());
           setEmailStatus(null); setEmail("");
           setRating(0); setRatingComment(""); setRatingStatus(null);
@@ -675,6 +696,8 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       }
       cacheSet(form, bag);
       setResult(bag);
+      bagSourceRef.current = "generate";
+      track("bag_rendered", { source: "generate", item_count: bag.items?.length, attempts });
       setBagId(crypto.randomUUID());
       setEmailStatus(null); setEmail("");
       setRating(0); setRatingComment(""); setRatingStatus(null);
@@ -692,6 +715,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
   // Quick-pick: load a prebuilt, fully-enriched themed bag straight from /api/preset.
   // No enrichBag / no /api/generate — the preset is already enriched, which is the speed win.
   const loadPreset = async (presetKey) => {
+    track("preset_used", { preset_key: presetKey });
     setLoading(true); setError(null); setResult(null); setDebugInfo(null);
     try {
       const r = await fetch(`/api/preset?key=${encodeURIComponent(presetKey)}`);
@@ -707,6 +731,8 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       }
       const { bag } = await r.json();
       setResult(bag);
+      bagSourceRef.current = "preset";
+      track("bag_rendered", { source: "preset", item_count: bag.items?.length });
       setBagId(crypto.randomUUID());
       setEmailStatus(null); setEmail("");
       setRating(0); setRatingComment(""); setRatingStatus(null);
@@ -1141,14 +1167,16 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                           <h3 style={{fontFamily:"'Fredoka One',cursive",fontSize:"1.05rem",color:"#333",marginBottom:3}}>{item.name}</h3>
                           <p style={{fontSize:".86rem",color:"#777",lineHeight:1.45,fontWeight:600}}>{item.description}</p>
                           <div className="item-actions">
-                            <a className="amz-btn" href={item.detailPageURL || amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
+                            <a className="amz-btn" href={item.detailPageURL || amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer"
+                              onClick={() => track("amazon_click", { enriched: !!item.detailPageURL, category: item.category, item_name: item.name, bag_source: bagSourceRef.current })}>
                               🛒 Shop this item
                             </a>
                             <button className="swap-btn" onClick={() => replaceItem(i)}
                               disabled={swappingIndex !== null}>
                               {isSwapping ? <><span className="swap-spin"/>Replacing…</> : "🔄 Replace item"}
                             </button>
-                            <a className="more-btn" href={amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer">
+                            <a className="more-btn" href={amazonLink(item.searchQuery)} target="_blank" rel="noopener noreferrer"
+                              onClick={() => track("amazon_click", { enriched: false, category: item.category, item_name: item.name, bag_source: bagSourceRef.current })}>
                               🔍 See more options
                             </a>
                           </div>

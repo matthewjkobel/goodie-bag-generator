@@ -21,6 +21,28 @@ const redis = new Redis({
   token: process.env.KV_REST_API_TOKEN,
 });
 
+// ── Query stats (best-effort; measures real demand + cache hit-rate) ──────────
+const STAT_TTL = 60 * 60 * 24 * 14; // keep ~2 weeks, then auto-expire
+
+// Monotonic week number (UTC). Same formula used by query-stats.mjs to read it back.
+const weekBucket = () => Math.floor(Date.now() / (1000 * 60 * 60 * 24 * 7));
+
+// Best-effort: a stats failure must NEVER break enrichment.
+async function logStat(query, cacheHit) {
+  const w = weekBucket();
+  const q = query.toLowerCase().trim();
+  try {
+    const p = redis.pipeline();
+    p.zincrby(`gbg:querystats:${w}`, 1, q);
+    p.incr(`gbg:cache${cacheHit ? "hit" : "miss"}:${w}`);
+    if (!cacheHit) p.zincrby(`gbg:querymiss:${w}`, 1, q);
+    p.expire(`gbg:querystats:${w}`, STAT_TTL);
+    p.expire(`gbg:cache${cacheHit ? "hit" : "miss"}:${w}`, STAT_TTL);
+    if (!cacheHit) p.expire(`gbg:querymiss:${w}`, STAT_TTL);
+    await p.exec();
+  } catch { /* swallow — stats are never worth a failed enrich */ }
+}
+
 // ── Config ──────────────────────────────────────────────────────────────────
 const TOKEN_URL   = "https://api.amazon.com/auth/o2/token";        // v3.1, NA (LwA)
 const API_URL     = "https://creatorsapi.amazon/catalog/v1/searchItems";
@@ -51,14 +73,21 @@ async function getToken() {
 }
 
 // ── One product lookup, cache-first ───────────────────────────────────────────
-async function searchOne(query, token) {
+async function searchOne(query, token, track = false) {
   const key = `gbg:product:${query.toLowerCase().trim()}`;
 
   // Cache hit (Upstash auto-deserializes JSON)
   try {
     const cached = await redis.get(key);
-    if (cached) return cached;                  // may be a product object OR the {miss:true} marker
+    if (cached) {                               // may be a product object OR the {miss:true} marker
+      // "Cache hit" = served without a Creators API call (incl. negative-cache) — the cost win we measure.
+      if (track) await logStat(query, true);
+      return cached;
+    }
   } catch { /* cache read failure → fall through to a live call */ }
+
+  // Live (uncached) call — count it as a miss for hit-rate purposes.
+  if (track) await logStat(query, false);
 
   const r = await fetch(API_URL, {
     method: "POST",
@@ -105,8 +134,8 @@ async function searchOne(query, token) {
 }
 
 // Merge one AI item with its looked-up product data (or return it unchanged on miss).
-async function enrichItem(it, token) {
-  const p = await searchOne(it.searchQuery, token);
+async function enrichItem(it, token, track = false) {
+  const p = await searchOne(it.searchQuery, token, track);
   const matched = p && !p.miss && p.imageUrl;
   if (!matched) return it;                       // graceful fallback: unchanged search-link item
   return {
@@ -131,7 +160,8 @@ export default async function handler(req, res) {
     const { item, items } = req.body;
 
     if (item && item.searchQuery) {
-      const enriched = await enrichItem(item, token);
+      // Single item = real user demand → track it. (The array branch is the warmer; leave it untracked.)
+      const enriched = await enrichItem(item, token, true);
       return res.status(200).json({ item: enriched });
     }
     if (Array.isArray(items)) {
