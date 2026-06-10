@@ -113,16 +113,17 @@ const bagTotalRange = (items = []) => {
 };
 
 // ─── Form options ─────────────────────────────────────────────────────────────
+// Ordered: perennial #1 first, then by seasonal proximity (revisit each season — PRD §12 B3).
 const OCCASIONS = [
   { value:"birthday",       label:"🎂 Birthday Party"     },
+  { value:"end_of_year",    label:"🏫 End of School Year"  },
+  { value:"fourth_july",    label:"🇺🇸 4th of July"        },
+  { value:"general",        label:"🎉 General Celebration" },
+  { value:"back_to_school", label:"🎒 Back to School"      },
   { value:"halloween",      label:"🎃 Halloween"           },
   { value:"christmas",      label:"🎄 Christmas/Winter"    },
   { value:"valentines",     label:"❤️ Valentine's Day"     },
   { value:"easter",         label:"🐣 Easter"              },
-  { value:"fourth_july",    label:"🇺🇸 4th of July"        },
-  { value:"end_of_year",    label:"🏫 End of School Year"  },
-  { value:"back_to_school", label:"🎒 Back to School"      },
-  { value:"general",        label:"🎉 General Celebration" },
 ];
 
 const BAG_STYLES = [
@@ -410,7 +411,8 @@ export default function GoodyBagGenerator() {
   const [enrichingKeys, setEnrichingKeys] = useState(() => new Set()); // item indices still resolving
   const [bagId, setBagId] = useState(null);              // stable id for the current bag (for the return link)
   const [email, setEmail] = useState("");
-  const [emailStatus, setEmailStatus] = useState(null);  // null | "sending" | "sent" | "error"
+  const [emailStatus, setEmailStatus] = useState(null);  // null | "sending" | "sent" | "error" | "consent"
+  const [emailConsent, setEmailConsent] = useState(false); // opt-in checkbox — must be ticked to send
   const [rating, setRating] = useState(0);               // 0 = none chosen yet
   const [ratingComment, setRatingComment] = useState("");
   const [ratingStatus, setRatingStatus] = useState(null); // null | "sending" | "sent"
@@ -595,6 +597,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
 
   // Email-my-results: stores the bag server-side + adds the Kit subscriber → triggers the email.
   const submitEmail = async () => {
+    if (!emailConsent) { setEmailStatus("consent"); return; }
     if (!email || !/.+@.+\..+/.test(email)) { setEmailStatus("error"); return; }
     if (!result || !bagId) return;
     setEmailStatus("sending");
@@ -676,7 +679,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
           bagSourceRef.current = "cache";
           track("bag_rendered", { source: "cache", item_count: cached.items?.length, attempts: 0 });
           setBagId(crypto.randomUUID());
-          setEmailStatus(null); setEmail("");
+          setEmailStatus(null); setEmail(""); setEmailConsent(false);
           setRating(0); setRatingComment(""); setRatingStatus(null);
           enrichBag(cached);
           setDebugInfo({ attempts: 0, cached: true });
@@ -699,7 +702,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       bagSourceRef.current = "generate";
       track("bag_rendered", { source: "generate", item_count: bag.items?.length, attempts });
       setBagId(crypto.randomUUID());
-      setEmailStatus(null); setEmail("");
+      setEmailStatus(null); setEmail(""); setEmailConsent(false);
       setRating(0); setRatingComment(""); setRatingStatus(null);
       enrichBag(bag);
       setDebugInfo({ attempts, validationErrors: errors, cached: false });
@@ -734,7 +737,7 @@ Now generate a bag for the user's actual inputs. Return ONLY valid JSON, no mark
       bagSourceRef.current = "preset";
       track("bag_rendered", { source: "preset", item_count: bag.items?.length });
       setBagId(crypto.randomUUID());
-      setEmailStatus(null); setEmail("");
+      setEmailStatus(null); setEmail(""); setEmailConsent(false);
       setRating(0); setRatingComment(""); setRatingStatus(null);
       setConfetti(c => c + 1);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior:"smooth" }), 200);
@@ -915,6 +918,8 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
         .email-btn:disabled{opacity:.6;cursor:default;transform:none}
         .email-sent{font-weight:800;color:#1D9E75;font-size:1rem}
         .email-err{color:#E03131;font-weight:700;font-size:.85rem;margin-top:8px}
+        .email-consent{display:flex;align-items:flex-start;gap:8px;justify-content:center;margin-top:10px;font-size:.82rem;font-weight:600;color:#888;cursor:pointer;text-align:left;max-width:480px;margin-left:auto;margin-right:auto}
+        .email-consent input{margin-top:2px;accent-color:#FF922B;width:16px;height:16px;flex-shrink:0;cursor:pointer}
         .rating-box{max-width:520px;margin:16px auto 0;text-align:center}
         .rating-q{font-weight:700;color:#555;margin-bottom:6px;font-size:.95rem}
         .stars{display:flex;gap:6px;justify-content:center}
@@ -1232,6 +1237,12 @@ Return ONLY a single JSON object for the replacement item, no markdown fences, n
                       {emailStatus==="sending" ? <><span className="swap-spin"/>Sending…</> : "Email it to me"}
                     </button>
                   </div>
+                  <label className="email-consent">
+                    <input type="checkbox" checked={emailConsent}
+                      onChange={e => { setEmailConsent(e.target.checked); if (emailStatus === "consent") setEmailStatus(null); }} />
+                    <span>Email me my goodie bag link and occasional party-planning tips. Unsubscribe anytime.</span>
+                  </label>
+                  {emailStatus === "consent" && <p className="email-err">Please check the box above so we can send it to you.</p>}
                   {emailStatus === "error" && <p className="email-err">Hmm, that didn't go through. Check the address and try again.</p>}
                 </>
               )}
